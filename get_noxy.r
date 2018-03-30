@@ -193,7 +193,7 @@ close(pb)
 # create facet plot (cummulatie distributions in this case of
 # all school types) / might need a correction for the
 # qualitative binning beforehand 
-facet = ggplot(data = poi_subset, aes(nox_values)) + 
+facet = ggplot(data = poi_subset, aes(nox_value)) + 
   stat_ecdf() +
   xlab("NOx value (µg/m³)") +
   ylab("Cummulative Probablity") +
