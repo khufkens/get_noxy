@@ -23,11 +23,11 @@ library(ggthemes)
 all_poi <- jsonlite::fromJSON("http://poi.api.geopunt.be/v1/core/poitypes")
 
 # list all school categories used in the example
-education <-all_poi$categories$term[grepl("onderwijs",
+education <- all_poi$categories$term[grepl("onderwijs",
                                           tolower(all_poi$categories$term))]
 
 # an example on how to query all sport categories
-sport <-all_poi$categories$term[grepl("sport",
+sport <- all_poi$categories$term[grepl("sport",
                                       tolower(all_poi$categories$term))]
 
 # function to get point of interest data using search
@@ -74,7 +74,7 @@ poi_location <- function(poi_term = "GewoonLagerOnderwijs"){
 }
 
 # extract all data poi meta-data for a nested list of poi
-poi_subset = do.call("rbind", lapply(education, function(x){
+poi_subset <- do.call("rbind", lapply(education, function(x){
   output <- try(poi_location(x))
   if(inherits(output,"try-error")){
     return(NULL)
@@ -195,7 +195,7 @@ close(pb)
 # qualitative binning beforehand 
 facet = ggplot(data = poi_subset, aes(nox_value)) + 
   stat_ecdf() +
-  xlab(expression(~NO[2] "value (µg/m³)")) +
+  xlab(expression(~NO[2] ~"value (µg/m³)")) +
   ylab("Cummulative Probablity") +
   facet_wrap(~ type, ncol = 4) +
   theme_minimal()
