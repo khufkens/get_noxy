@@ -1,4 +1,4 @@
-# Combine geopunt.be points of interest and IRCELINE NOx data
+# Combines geopunt.be points of interest and IRCELINE NOx data
 
 # The code uses base R, it could be a bit shorter
 # using tidyverse semantics but this increases library requirements
@@ -28,7 +28,7 @@ education <-all_poi$categories$term[grepl("onderwijs",
 
 # an example on how to query all sport categories
 sport <-all_poi$categories$term[grepl("sport",
-                                          tolower(all_poi$categories$term))]
+                                      tolower(all_poi$categories$term))]
 
 # function to get point of interest data using search
 # terms listed by the API
@@ -36,7 +36,7 @@ poi_location <- function(poi_term = "GewoonLagerOnderwijs"){
   
   # query the poi term
   poi_data <- jsonlite::fromJSON(sprintf("http://poi.api.geopunt.be/v1/core?poitype=%s",
-                                poi_term))
+                                         poi_term))
   
   # sanity check, if no data is there, skip
   if(length(poi_data$pois)==0){
@@ -51,7 +51,7 @@ poi_location <- function(poi_term = "GewoonLagerOnderwijs"){
                         lon = coordinates[1]))
     } else {
       return(data.frame(lat = NULL,
-                       lon = NULL))
+                        lon = NULL))
     }
   }))
   
@@ -60,7 +60,7 @@ poi_location <- function(poi_term = "GewoonLagerOnderwijs"){
                         poi_data$pois$categories)[-1]
   labels <- do.call("rbind",
                     poi_data$pois$labels)[-1]
-
+  
   # stuff into output data frame and rename columns
   df <- data.frame(labels, categories, lat_lon)
   colnames(df) <- c("school_name",
@@ -93,7 +93,7 @@ poi_subset = do.call("rbind", lapply(education, function(x){
 get_nox <- function(lat,
                     lon,
                     wms_server = "http://geo.irceline.be/rioifdm/wms",
-                    wms_layer = "rioifdm:no2_anmean_2016"){
+                    wms_layer = "rioifdm:no2_anmean_2016_ospm_vl"){
   
   # create a look up table to match colour values
   # with a particular NOx concentration using a
@@ -121,29 +121,29 @@ get_nox <- function(lat,
   
   # create xml scheme to query WMS data using GDAL
   wms_description <- paste0('<GDAL_WMS>
-                      <Service name="WMS">
-                      <Version>1</Version>
-                      <ServerUrl>',wms_server,'?</ServerUrl>
-                      <Layers>',wms_layer,'</Layers>
-                      <ImageFormat>image/png</ImageFormat>
-                      </Service>
-                      <DataWindow>
-                      <UpperLeftX>',lon - offset,'</UpperLeftX>
-                      <UpperLeftY>',lat + offset,'</UpperLeftY>
-                      <LowerRightX>',lon + offset,'</LowerRightX>
-                      <LowerRightY>',lat - offset,'</LowerRightY>
-                      <SizeX>3</SizeX>
-                      <SizeY>3</SizeY>
-                      </DataWindow>
-                      <Projection>EPSG:4326</Projection>
-                      <BlockSizeX>1024</BlockSizeX>
-                      <BlockSizeY>1024</BlockSizeY>
-                      <OverviewCount>7</OverviewCount>
-                      </GDAL_WMS>')
+                            <Service name="WMS">
+                            <Version>1</Version>
+                            <ServerUrl>',wms_server,'?</ServerUrl>
+                            <Layers>',wms_layer,'</Layers>
+                            <ImageFormat>image/png</ImageFormat>
+                            </Service>
+                            <DataWindow>
+                            <UpperLeftX>',lon - offset,'</UpperLeftX>
+                            <UpperLeftY>',lat + offset,'</UpperLeftY>
+                            <LowerRightX>',lon + offset,'</LowerRightX>
+                            <LowerRightY>',lat - offset,'</LowerRightY>
+                            <SizeX>3</SizeX>
+                            <SizeY>3</SizeY>
+                            </DataWindow>
+                            <Projection>EPSG:4326</Projection>
+                            <BlockSizeX>1024</BlockSizeX>
+                            <BlockSizeY>1024</BlockSizeY>
+                            <OverviewCount>7</OverviewCount>
+                            </GDAL_WMS>')
   
   # query data and stuff in convenient raster stack
   r <- try(raster::stack(rgdal::readGDAL(wms_description,
-                                     silent = TRUE)))
+                                         silent = TRUE)))
   
   # trap server errors (edge cases?), return NA
   if(inherits(r,"try-error")){
@@ -163,7 +163,7 @@ get_nox <- function(lat,
       sum((x - values)^2)
     )
   })
- 
+  
   # return colour information as the upper boundary of the
   # concentration interval using the minimum distance per
   # look up table (this aproach is necessary as colour information
@@ -201,5 +201,5 @@ facet = ggplot(data = poi_subset, aes(nox_values)) +
   theme_minimal()
 
 pdf("~/nox_facet_plot.pdf",12,9)
-  plot(facet)
+plot(facet)
 dev.off()
