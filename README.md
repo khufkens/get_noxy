@@ -8,6 +8,6 @@ This script, in the [R statistical language](https://www.r-project.org/), uses t
 
 A second function uses the GDAL spatial libraries to read the WMS data from IRCELINE servers which provide data on air quality, for the points of interest.
 
-Data are finally plotted as a cummulative distribution facet plot using the type parameter (which kind of school in the example) as a grouping factor.
+Data are finally plotted as a cummulative distribution facet plot using the type parameter (which kind of school in the example) as a grouping factor. Results should be similar to those presented in a [the article in "De Morgen" (03/03/2018)](https://www.demorgen.be/binnenland/1-op-3-plekken-voor-kinderen-in-vlaanderen-heeft-slechte-lucht-ontluisterend-ba136584/) with numbers provided by stRaten-generaal.
 
 ![](https://github.com/khufkens/get_noxy/raw/master/nox_facet_plot.png) 
