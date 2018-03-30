@@ -195,7 +195,7 @@ close(pb)
 # qualitative binning beforehand 
 facet = ggplot(data = poi_subset, aes(nox_value)) + 
   stat_ecdf() +
-  xlab("NOx value (µg/m³)") +
+  xlab(expression(~NO[2] "value (µg/m³)")) +
   ylab("Cummulative Probablity") +
   facet_wrap(~ type, ncol = 4) +
   theme_minimal()
