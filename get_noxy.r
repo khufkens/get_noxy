@@ -254,7 +254,7 @@ facet = ggplot(data = poi_subset, aes(nox_value)) +
   stat_ecdf() +
   xlab(expression(~NO[2] ~"value (µg/m³)")) +
   ylab("Cummulative Probablity") +
-  facet_wrap(~ type, ncol = 4) +
+  facet_wrap(~ poi_type, ncol = 4) +
   theme_minimal()
 
 pdf("~/nox_facet_plot.pdf",12,9)
