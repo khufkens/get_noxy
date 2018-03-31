@@ -19,58 +19,113 @@ library(ggthemes)
 
 #---- grab meta data for points of interest in geopunt.be
 
-#list all points of interest in the geopunt.be API
+# list all points of interest in the geopunt.be API
 all_poi <- jsonlite::fromJSON("http://poi.api.geopunt.be/v1/core/poitypes")
 
 # list all school categories used in the example
 education <- all_poi$categories$term[grepl("onderwijs",
                                           tolower(all_poi$categories$term))]
 
-# an example on how to query all sport categories
-sport <- all_poi$categories$term[grepl("sport",
-                                      tolower(all_poi$categories$term))]
-
+# grab data
 # function to get point of interest data using search
 # terms listed by the API
-poi_location <- function(poi_term = "GewoonLagerOnderwijs"){
+poi_location <- function(poi_type = "DeeltijdsKunstonderwijs"){
   
-  # query the poi term
-  poi_data <- jsonlite::fromJSON(sprintf("http://poi.api.geopunt.be/v1/core?poitype=%s",
-                                         poi_term))
+  # query the poi term, returns a mix of locations which are
+  # correctly defined and "clusters" this cluster bullshit
+  # needs to be recursively parsed to get to the remaining
+  # true locations
+  poi_data <- try(jsonlite::fromJSON(sprintf("http://poi.api.geopunt.be/v1/core?poitype=%s",
+                                             poi_type)))
   
-  # sanity check, if no data is there, skip
-  if(length(poi_data$pois)==0){
-    return(NULL)
+  # check downloaded data
+  if (inherits(poi_data,"try-error") | length(poi_data$pois) == 0){
+    lat_lon <- NULL
+    clusters <- NULL
+  } else {
+    
+    # convert the true point location data to a more appealing format
+    lat_lon <- as.data.frame(as.matrix(do.call("rbind",
+                                               lapply(poi_data$pois$location$points,
+                                                      unlist))[,1:2]),
+                             stringsAsFactors = FALSE)
+    # convert to numeric
+    lat_lon <- sapply(lat_lon, as.numeric)
+    
+    # assign colnames
+    colnames(lat_lon) <- c("lon","lat")
+    
+    # set cluster output
+    if(nrow(lat_lon) == as.numeric(poi_data$labels$value)){
+      clusters = NULL
+    } else {
+      clusters = do.call("rbind",
+                         poi_data$clusters$point$Point$coordinates)
+    }
   }
   
-  # convert the point location data to a more appealing format
-  lat_lon <- do.call("rbind", lapply(poi_data$pois$location$points, function(x){
-    coordinates <- unlist(x$Point$coordinates)
-    if(length(coordinates) > 1){
-      return(data.frame(lat = coordinates[2],
-                        lon = coordinates[1]))
-    } else {
-      return(data.frame(lat = NULL,
-                        lon = NULL))
-    }
-  }))
+  if(!is.null(clusters)){
+    
+    # create a simple progress bar for ease of mind while downloading
+    #pb <- txtProgressBar(min = 0, max = nrow(data$clusters), style = 3)
+    i <- 0
+    
+    # this can be parallized but I'm unsure if geopunt would like
+    # scripts querying at 4 / 8 / 16 queries at the same time from
+    # same IP
+    tmp = apply(clusters[1:3,], 1, function(x){
+      
+      # counter
+      i <<- i + 1
+      setTxtProgressBar(pb, i)
+      
+      # parse the cluster locations
+      poi_data <- try(jsonlite::fromJSON(paste0("http://poi.beta.geopunt.be/v1/core?poitype=",
+                                                poi_type,
+                                                "&north=",x[2],
+                                                "&east=",x[1],
+                                                "&radius=10000&maxcount=1000&clustering=false")))
+      
+      if (inherits(poi_data,"try-error")){
+        lat_lon <- NULL
+        clusters <- NULL
+      } else {
+        # convert the true point location data to a more appealing format
+        lat_lon <- as.data.frame(as.matrix(do.call("rbind",
+                                                   lapply(poi_data$pois$location$points,
+                                                          unlist))[,1:2]),
+                                 stringsAsFactors = FALSE)
+        # convert to numeric
+        lat_lon <- sapply(lat_lon, as.numeric)
+        
+        # assign colnames
+        colnames(lat_lon) <- c("lon","lat")
+      }
+      
+      # return a nested list with no clusters if the number of retrieved
+      # coordinates equals the total number in the database
+      return(list("coordinates" = lat_lon,
+                  "clusters" = clusters))
+    })
+    
+    # clean up the progress bar
+    rm(i)
+    close(pb)
+    
+    # bind previous coordinates with new ones, find unique
+    # copies (trim) and assign column names as unique() eats
+    # them
+    combined_coordinates <- rbind(lat_lon,
+                                  do.call("rbind",
+                                          lapply(tmp, function(x)x$coordinates)))
+    
+    # correct labelling
+    combined_coordinates <- unique(combined_coordinates)
+    colnames(combined_coordinates) <- c("lon","lat")
+  }
   
-  # get categories, drop first "Type" column, do the same for the labels
-  categories <- do.call("rbind",
-                        poi_data$pois$categories)[-1]
-  labels <- do.call("rbind",
-                    poi_data$pois$labels)[-1]
-  
-  # stuff into output data frame and rename columns
-  df <- data.frame(labels, categories, lat_lon)
-  colnames(df) <- c("school_name",
-                    "poi_term",
-                    "type",
-                    "lat",
-                    "lon")
-  
-  # return values
-  return(df)
+  # return data in the same format as before
+  return(data.frame(combined_coordinates, poi_type))
 }
 
 # extract all data poi meta-data for a nested list of poi
@@ -189,6 +244,8 @@ poi_subset$nox_value = unlist(apply(poi_subset, 1, function(x){
 # clean up the progress bar
 rm(i)
 close(pb)
+
+#---- plot the data nicely
 
 # create facet plot (cummulatie distributions in this case of
 # all school types) / might need a correction for the
